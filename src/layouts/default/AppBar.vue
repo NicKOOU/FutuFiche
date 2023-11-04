@@ -1,9 +1,9 @@
 <template>
-  <v-app-bar app light color="primary">
+  <v-app-bar app light color="primary" image="@/assets/FutuFiche.svg">
     <v-app-bar-nav-icon @click.stop="drawer = !drawer" v-if="userLoggedIn"></v-app-bar-nav-icon>
 
     <!-- Avatar et Titre -->
-    <v-avatar :tile="true" size="100">
+    <v-avatar :tile="true">
       <img src="@/assets/FutuFiche.svg" alt="FutuFiche logo" />
     </v-avatar>
     <v-toolbar-title>
@@ -35,41 +35,33 @@
 
   <v-navigation-drawer v-model="drawer" app v-if="userLoggedIn">
     <v-list>
-      <v-list-item>
+      <v-list-item to="/ajouter-fiche" exact>
         <template v-slot:prepend>
-          <v-list-item-avatar>
-            <v-icon>mdi-file-plus</v-icon>
-          </v-list-item-avatar>
+          <v-icon>mdi-file-plus</v-icon>
         </template>
         <v-list-item-content>
           <v-list-item-title>Ajouter une fiche</v-list-item-title>
         </v-list-item-content>
       </v-list-item>
-      <v-list-item>
+      <v-list-item to="/Stats" exact>
         <template v-slot:prepend>
-          <v-list-item-avatar>
-            <v-icon>mdi-chart-bar</v-icon>
-          </v-list-item-avatar>
+          <v-icon>mdi-chart-bar</v-icon>
         </template>
         <v-list-item-content>
           <v-list-item-title>Graphiques et Statistiques</v-list-item-title>
         </v-list-item-content>
       </v-list-item>
-      <v-list-item>
+      <v-list-item to="/evolutions" exact>
         <template v-slot:prepend>
-          <v-list-item-avatar>
-            <v-icon>mdi-trending-up</v-icon>
-          </v-list-item-avatar>
+          <v-icon>mdi-trending-up</v-icon>
         </template>
         <v-list-item-content>
           <v-list-item-title>Évolutions</v-list-item-title>
         </v-list-item-content>
       </v-list-item>
-      <v-list-item>
+      <v-list-item to="/retraite" exact>
         <template v-slot:prepend>
-          <v-list-item-avatar>
-            <v-icon>mdi-briefcase-account</v-icon>
-          </v-list-item-avatar>
+          <v-icon>mdi-briefcase-account</v-icon>
         </template>
         <v-list-item-content>
           <v-list-item-title>Retraite</v-list-item-title>
@@ -80,11 +72,11 @@
   <v-dialog v-model="loginDialog" max-width="400px">
     <v-card>
       <v-card-title>
+        <v-img src="@/assets/FutuFiche.svg" alt="FutuFiche logo" width="100" height="100" class="image-center"></v-img>
         <span class="headline">Se connecter</span>
       </v-card-title>
 
       <v-card-text>
-        <v-img src="@/assets/FutuFiche.svg" alt="FutuFiche logo" width="100" height="100"></v-img>
         <v-form @submit.prevent="login">
           <v-text-field v-model="username" label="Nom d'utilisateur" outlined></v-text-field>
           <v-text-field v-model="password" label="Mot de passe" outlined type="password"></v-text-field>
@@ -97,11 +89,11 @@
   <v-dialog v-model="registerDialog" max-width="400px">
     <v-card>
       <v-card-title>
+        <v-img src="@/assets/FutuFiche.svg" alt="FutuFiche logo" width="100" height="100" class="image-center"></v-img>
         <span class="headline">S'inscrire</span>
       </v-card-title>
 
       <v-card-text>
-        <v-img src="@/assets/FutuFiche.svg" alt="FutuFiche logo" width="100" height="100"></v-img>
         <v-form @submit.prevent="register">
           <v-text-field v-model="newUsername" label="Nom d'utilisateur" outlined></v-text-field>
           <v-text-field v-model="newPassword" label="Mot de passe" outlined type="password"></v-text-field>
@@ -115,23 +107,31 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue';
+import Cookies from 'js-cookie';
 
-const drawer = ref(false)
-const userLoggedIn = ref(false)
-const loginDialog = ref(false)
-const registerDialog = ref(false)
-const username = ref('')
-const password = ref('')
-const newUsername = ref('')
-const newPassword = ref('')
+const drawer = ref(false);
+const userLoggedIn = ref(false);
+const loginDialog = ref(false);
+const registerDialog = ref(false);
+const username = ref('');
+const password = ref('');
+const newUsername = ref('');
+const newPassword = ref('');
 
 const login = () => {
   // Logique de connexion
-  userLoggedIn.value = true
-  loginDialog.value = false
-  drawer.value = true
-}
+  userLoggedIn.value = true;
+  Cookies.set('userLoggedIn', 'true', { expires: 7 }); // expire après 7 jours
+  loginDialog.value = false;
+  drawer.value = true;
+};
+
+const logout = () => {
+  // Logique de déconnexion
+  userLoggedIn.value = false;
+  Cookies.remove('userLoggedIn');
+};
 
 const openLoginDialog = () => {
   loginDialog.value = true
@@ -148,10 +148,14 @@ const openRegisterDialog = () => {
   registerDialog.value = true
 }
 
-const logout = () => {
-  // Logique de déconnexion
-  userLoggedIn.value = false
-}
+const checkLoggedInState = () => {
+  const storedState = Cookies.get('userLoggedIn');
+  userLoggedIn.value = storedState === 'true';
+};
+
+onMounted(() => {
+  checkLoggedInState();
+});
 </script>
 
 <style scoped>
@@ -163,5 +167,17 @@ const logout = () => {
 .v-btn .v-icon {
   margin-right: 4px;
   /* Espace entre l'icône et le texte */
+}
+
+.image-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 50%;
+}
+
+.v-app-bar.custom-app-bar {
+  background: url('@/assets/FutuFiche.svg') center center no-repeat;
+  background-size: cover;
 }
 </style>

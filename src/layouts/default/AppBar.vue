@@ -111,6 +111,8 @@
           <v-text-field v-model="newPassword" label="Mot de passe" outlined type="password"></v-text-field>
 
           <v-btn type="submit" color="primary">S'inscrire</v-btn>
+
+          <v-progress-circular v-if="loading" indeterminate size="24" color="primary"></v-progress-circular>
         </v-form>
         <v-alert v-if="registerError" type="error">{{ registerError }}</v-alert>
       </v-card-text>
@@ -171,6 +173,8 @@ const login = async () => {
 
 const register = async () => {
   try {
+    loading.value = true;
+
     const response = await fetch('https://futuficheback.onrender.com/api/users/register', {
       method: 'POST',
       headers: {
@@ -187,6 +191,11 @@ const register = async () => {
       const data = await response.json();
       registerError.value = null;
       userLoggedIn.value = true;
+      Cookies.remove('userLoggedIn');
+      Cookies.remove('username');
+      Cookies.set('userLoggedIn', 'true', { expires: 7 });
+      Cookies.set('username', newUsername.value, { expires: 7 });
+      checkLoggedInState();
       registerDialog.value = false;
       drawer.value = true;
     } else {
@@ -194,8 +203,11 @@ const register = async () => {
     }
   } catch (error) {
     registerError.value = 'Erreur lors de l\'inscription';
+  } finally {
+    loading.value = false;
   }
 };
+
 
 const logout = () => {
   userLoggedIn.value = false;

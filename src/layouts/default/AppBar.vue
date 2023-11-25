@@ -22,6 +22,11 @@
       <span>S'inscrire</span>
     </v-btn>
 
+    <v-btn v-if="userLoggedIn">
+      <v-icon>mdi-account</v-icon>
+      <span>{{ username }}</span>
+    </v-btn>
+
     <v-btn v-if="userLoggedIn" @click="logout">
       <v-icon>mdi-logout</v-icon>
       <span>Se déconnecter</span>
@@ -69,6 +74,7 @@
       </v-list-item>
     </v-list>
   </v-navigation-drawer>
+  <!-- Ajoutez ceci à votre template -->
   <v-dialog v-model="loginDialog" max-width="400px">
     <v-card>
       <v-card-title>
@@ -82,10 +88,15 @@
           <v-text-field v-model="password" label="Mot de passe" outlined type="password"></v-text-field>
 
           <v-btn type="submit" color="primary">Se connecter</v-btn>
+
+          <v-progress-circular v-if="loading" indeterminate size="24" color="primary"></v-progress-circular>
         </v-form>
+        <v-alert v-if="loginError" type="error">{{ loginError }}</v-alert>
       </v-card-text>
     </v-card>
   </v-dialog>
+
+
   <v-dialog v-model="registerDialog" max-width="400px">
     <v-card>
       <v-card-title>
@@ -96,11 +107,12 @@
       <v-card-text>
         <v-form @submit.prevent="register">
           <v-text-field v-model="newUsername" label="Nom d'utilisateur" outlined></v-text-field>
+          <v-text-field v-model="newEmail" label="Email" outlined></v-text-field>
           <v-text-field v-model="newPassword" label="Mot de passe" outlined type="password"></v-text-field>
-          <!-- Ajoutez d'autres champs d'inscription si nécessaire -->
 
           <v-btn type="submit" color="primary">S'inscrire</v-btn>
         </v-form>
+        <v-alert v-if="registerError" type="error">{{ registerError }}</v-alert>
       </v-card-text>
     </v-card>
   </v-dialog>
@@ -115,33 +127,86 @@ const userLoggedIn = ref(false);
 const loginDialog = ref(false);
 const registerDialog = ref(false);
 const username = ref('');
+const email = ref('');  // Ajout de l'email
 const password = ref('');
 const newUsername = ref('');
+const newEmail = ref('');  // Ajout de l'email pour l'inscription
 const newPassword = ref('');
+const loginError = ref(null);
+const registerError = ref(null);
+const loading = ref(false);
 
-const login = () => {
-  // Logique de connexion
-  userLoggedIn.value = true;
-  Cookies.set('userLoggedIn', 'true', { expires: 7 }); // expire après 7 jours
-  loginDialog.value = false;
-  drawer.value = true;
+const login = async () => {
+  try {
+    loading.value = true; // Activer le chargement
+
+    const response = await fetch('https://futuficheback.onrender.com/api/users/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: username.value,
+        password: password.value,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      loginError.value = null;
+      userLoggedIn.value = true;
+      Cookies.set('userLoggedIn', 'true', { expires: 7 });
+      Cookies.set('username', username.value, { expires: 7 });
+      loginDialog.value = false;
+      drawer.value = true;
+    } else {
+      loginError.value = 'Erreur lors de la connexion';
+    }
+  } catch (error) {
+    loginError.value = 'Erreur lors de la connexion';
+  } finally {
+    loading.value = false; // Désactiver le chargement, que l'appel réussisse ou échoue
+  }
+};
+
+const register = async () => {
+  try {
+    const response = await fetch('https://futuficheback.onrender.com/api/users/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        username: newUsername.value,
+        email: newEmail.value,
+        password: newPassword.value,
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      registerError.value = null;
+      userLoggedIn.value = true;
+      registerDialog.value = false;
+      drawer.value = true;
+    } else {
+      registerError.value = 'Erreur lors de l\'inscription';
+    }
+  } catch (error) {
+    registerError.value = 'Erreur lors de l\'inscription';
+  }
 };
 
 const logout = () => {
-  // Logique de déconnexion
   userLoggedIn.value = false;
+  username.value = '';
+  password.value = '';
   Cookies.remove('userLoggedIn');
+  Cookies.remove('username');
 };
 
 const openLoginDialog = () => {
   loginDialog.value = true
-}
-
-const register = () => {
-  // Logique d'inscription
-  userLoggedIn.value = true
-  registerDialog.value = false
-  drawer.value = true
 }
 
 const openRegisterDialog = () => {
@@ -151,12 +216,14 @@ const openRegisterDialog = () => {
 const checkLoggedInState = () => {
   const storedState = Cookies.get('userLoggedIn');
   userLoggedIn.value = storedState === 'true';
+  username.value = Cookies.get('username');
 };
 
 onMounted(() => {
   checkLoggedInState();
 });
 </script>
+
 
 <style scoped>
 .v-app-bar {

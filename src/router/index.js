@@ -16,6 +16,17 @@ const routes = [
       },
     ],
   },
+  {
+    path: '/ajouter-fiche',
+    component: () => import('@/layouts/default/Default.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Fiche',
+        component: () => import('@/views/Fiche.vue'),
+      },
+    ],
+  }
 ]
 
 const router = createRouter({

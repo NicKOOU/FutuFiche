@@ -123,6 +123,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import Cookies from 'js-cookie';
+import { useRouter } from 'vue-router';
+const router = useRouter();
 
 const drawer = ref(false);
 const userLoggedIn = ref(false);
@@ -215,6 +217,7 @@ const logout = () => {
   password.value = '';
   Cookies.remove('userLoggedIn');
   Cookies.remove('username');
+  router.push('/');
 };
 
 const openLoginDialog = () => {
@@ -229,6 +232,10 @@ const checkLoggedInState = () => {
   const storedState = Cookies.get('userLoggedIn');
   userLoggedIn.value = storedState === 'true';
   username.value = Cookies.get('username');
+
+  if (!userLoggedIn.value) {
+    router.push('/');
+  }
 };
 
 onMounted(() => {

@@ -8,19 +8,19 @@
                     <v-card-text class="add-text">Ajouter une fiche</v-card-text>
                 </v-card>
             </v-col>
-            <v-col v-for="fiche in fiches" :key="fiche.id" cols="12" md="3">
+            <v-col v-for="fiche in fiches" :key="fiche.period + fiche.employer" cols="12" md="3">
                 <v-card class="fiche-card">
-                    <v-card-title class="fiche-header">{{ fiche.monthYear }}</v-card-title>
+                    <v-card-title class="fiche-header">{{ fiche.period }}</v-card-title>
 
-                    <v-card-subtitle class="fiche-subtitle">{{ fiche.companyName }}</v-card-subtitle>
+                    <v-card-subtitle class="fiche-subtitle">{{ fiche.employer }}</v-card-subtitle>
 
-                    <v-card-text class="fiche-net">NET {{ fiche.netAmount }}</v-card-text>
+                    <v-card-text class="fiche-net">NET {{ fiche.netPay }}</v-card-text>
 
                     <v-card-actions class="fiche-actions">
-                        <v-btn @click="deleteFiche(fiche.id)" text class="suppbut">
+                        <v-btn @click="deleteFiche(fiche.period + fiche.employer)" text class="suppbut">
                             <v-icon>mdi-delete</v-icon>
                         </v-btn>
-                        <v-btn @click="viewFiche(fiche.id)" text class="addbut">
+                        <v-btn @click="viewFiche(fiche.period + fiche.employer)" text class="addbut">
                             <v-icon>mdi-eye</v-icon>
                         </v-btn>
                     </v-card-actions>
@@ -28,40 +28,177 @@
             </v-col>
 
         </v-row>
+
+        <v-dialog v-model="ficheDialog" max-width="600px">
+            <v-card>
+                <v-card-title>Ajouter une fiche de paie</v-card-title>
+                <v-card-text>
+                    <v-file-input label="Fichier PDF ou image"></v-file-input>
+                </v-card-text>
+                <v-card-actions>
+                    <v-btn @click="addFicheDialog = false">Annuler</v-btn>
+                    <v-btn @click="addFicheToServer">Valider</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
     </v-container>
 </template>
-<script setup>
-import { ref } from 'vue';
 
-const fiches = ref([
-    { id: 1, monthYear: 'Février 2022', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 2, monthYear: 'Janvier 2022', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 3, monthYear: 'Décembre 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 4, monthYear: 'Novembre 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 5, monthYear: 'Octobre 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 6, monthYear: 'Septembre 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 7, monthYear: 'Août 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 8, monthYear: 'Juillet 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 9, monthYear: 'Juin 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 10, monthYear: 'Mai 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 11, monthYear: 'Avril 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 12, monthYear: 'Mars 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 13, monthYear: 'Février 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 14, monthYear: 'Janvier 2021', companyName: 'SALYTECH', netAmount: '1 500 €' },
-    { id: 15, monthYear: 'Décembre 2020', companyName: 'SALYTECH', netAmount: '1 500 €' },
-]);
+<script setup>
+import { ref, onMounted } from 'vue';
+import Cookies from 'js-cookie';
+
+
+
+const ficheDialog = ref(false);
+const fiches = ref([]);
 
 const viewFiche = (ficheId) => {
-    console.log('Visualiser la fiche de paie avec l\'ID:', ficheId);
+
 };
 
 const deleteFiche = (ficheId) => {
-    console.log('Supprimer la fiche de paie avec l\'ID:', ficheId);
+    fiches.value = fiches.value.filter(fiche => fiche.period + fiche.employer !== ficheId);
+    const username = Cookies.get('username');
+    if (!username) {
+        console.log('User not logged in');
+        return;
+    }
+
+    fetch('http://localhost:3000/api/fiches/deleteFiche/' + username + '/' + ficheId, {
+        method: 'DELETE',
+    }).then(response => {
+        if (response.status === 200) {
+            console.log('Fiche deleted');
+        } else {
+            console.log('Error deleting fiche');
+        }
+    });
+
+};
+
+const addFicheToServer = async () => {
+    const file = document.querySelector('input[type=file]').files[0];
+
+    if (!file) {
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener('load', async (event) => {
+        const base64 = event.target.result;
+        console.log(base64);
+
+        try {
+
+            const formData = new FormData();
+            formData.append('base64Image', base64);
+            formData.append('filetype', 'pdf');
+            formData.append('isTable', true);
+            formData.append('scale', true);
+            formData.append('language', 'fre');
+
+            const ocrData = await fetch('https://api.ocr.space/parse/image', {
+                method: 'POST',
+                headers: {
+                    apikey: '',
+                },
+                body: formData,
+            });
+
+            const ocrDataJson = await ocrData.json();
+            let lines = ocrDataJson.ParsedResults[0].ParsedText;
+            lines = lines.replace(/•/g, '');
+            console.log(lines);
+            const extractValue = (text, keyword) => {
+                const regex = new RegExp(`${keyword}\\s*:?\\s*([^\\n]+)`);
+                const match = text.match(regex);
+
+                if (match) {
+                    let value = match[1].trim();
+                    value = value.split('\t')[0];
+                    return value;
+                } else {
+                    return null;
+                }
+            };
+
+            const extractNumber = (text, keyword) => {
+                const regex = new RegExp(`${keyword}\\s*:\\s*(\\d+)`);
+                const match = text.match(regex);
+
+                return match ? match[1].trim() : null;
+            };
+
+            const extractLastNumber = (text, keyword) => {
+                const regex = new RegExp(`${keyword}\\s*:\\s*([0-9., ]+)`);
+                const match = text.match(regex);
+
+                if (match) {
+                    let value = match[1].trim();
+
+                    const parts = value.split(/\s+/);
+                    const lastPart = parts[parts.length - 1];
+
+                    const cleanedValue = lastPart.replace(/ /g, '').replace(/,/g, '.');
+
+                    const floatValue = parseFloat(cleanedValue);
+
+                    if (!isNaN(floatValue)) {
+                        return floatValue;
+                    }
+                }
+
+                return null;
+            };
+
+            const data = {
+                employer: extractNumber(lines, 'Siret'),
+                period: extractValue(lines, 'Période'),
+                jobTitle: extractValue(lines, 'Emploi'),
+                baseSalary: extractLastNumber(lines, 'Salaire de base'),
+                totalNetSocial: extractLastNumber(lines, 'Total net social'),
+                netToPayBeforeIncomeTax: extractLastNumber(lines, 'Net à payer avant impôt sur le revenu'),
+                incomeTax: extractLastNumber(lines, 'Impôt sur le revenu prélevé à la source - PAS'),
+                netPay: extractLastNumber(lines, 'Net payé'),
+                leaveN: extractLastNumber(lines, 'Congés N'),
+                leaveN1: extractLastNumber(lines, 'Congés N-1'),
+                restaurantCoupons: extractNumber(lines, 'Tickets restaurant')
+            };
+
+            console.log(data);
+
+        } catch (error) {
+            console.error('Error adding fiche', error);
+        }
+    });
+    reader.readAsDataURL(file);
+};
+
+const extractValue = (text, regex) => {
+    const match = text.match(regex);
+    if (match) {
+        return match[1];
+    }
+    return '';
 };
 
 const addFiche = () => {
-    console.log('Ajouter une nouvelle fiche de paie');
+    ficheDialog.value = true;
 };
+
+onMounted(async () => {
+    const username = Cookies.get('username');
+    if (!username) {
+        console.log('User not logged in');
+        return;
+    }
+    const response = await fetch('http://localhost:3000/api/fiches/getFiches/' + username);
+    response.json().then(data => {
+        fiches.value = data.fiches;
+    });
+});
 </script>
 
 <style scoped>

@@ -144,7 +144,7 @@ const login = async () => {
   try {
     loading.value = true; // Activer le chargement
 
-    const response = await fetch('https://futuficheback.onrender.com/api/users/login', {
+    const response = await fetch('http://localhost:3000/api/users/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -177,7 +177,7 @@ const register = async () => {
   try {
     loading.value = true;
 
-    const response = await fetch('https://futuficheback.onrender.com/api/users/register', {
+    const response = await fetch('http://localhost:3000/api/users/register', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

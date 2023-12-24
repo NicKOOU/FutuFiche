@@ -42,18 +42,71 @@
             </v-card>
         </v-dialog>
 
+        <template>
+            <v-dialog v-model="ocrDialog" max-width="1300px">
+                <v-card class="ocr-dialog">
+                    <v-card-title class="headline">OCR AI</v-card-title>
+                    <v-divider></v-divider>
+                    <v-container>
+                        <v-row>
+                            <v-col cols="6">
+                                <vue-pdf-embed :source="pdf" :page="1" :scale="1.5"></vue-pdf-embed>
+                            </v-col>
+                            <v-col cols="6">
+                                <v-card>
+                                    <v-card-title class="headline">Informations trouvées</v-card-title>
+                                    <v-divider></v-divider>
+                                    <v-form>
+                                        <v-text-field v-model="employer" label="Employeur"></v-text-field>
+                                        <v-text-field v-model="period" label="Période"></v-text-field>
+                                        <v-text-field v-model="jobTitle" label="Emploi"></v-text-field>
+                                        <v-text-field v-model="baseSalary" label="Salaire de base"></v-text-field>
+                                        <v-text-field v-model="totalNetSocial" label="Total net social"></v-text-field>
+                                        <v-text-field v-model="netToPayBeforeIncomeTax"
+                                            label="Net à payer avant impôt sur le revenu"></v-text-field>
+                                        <v-text-field v-model="incomeTax"
+                                            label="Impôt sur le revenu prélevé à la source - PAS"></v-text-field>
+                                        <v-text-field v-model="netPay" label="Net payé"></v-text-field>
+                                        <v-text-field v-model="leaveN" label="Congés N"></v-text-field>
+                                        <v-text-field v-model="leaveN1" label="Congés N-1"></v-text-field>
+                                        <v-text-field v-model="restaurantCoupons" label="Tickets restaurant"></v-text-field>
+                                    </v-form>
+                                    <v-card-actions>
+                                        <v-btn @click="ocrDialog = false">Annuler</v-btn>
+                                        <v-btn @click="sendData()">Valider</v-btn>
+                                    </v-card-actions>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </v-card>
+            </v-dialog>
+        </template>
+
+
     </v-container>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import Cookies from 'js-cookie';
-
-
+import VuePdfEmbed from 'vue-pdf-embed';
 
 const ficheDialog = ref(false);
 const fiches = ref([]);
-
+const ocrDialog = ref(false);
+const pdf = ref(null);
+const employer = ref('');
+const period = ref('');
+const jobTitle = ref('');
+const baseSalary = ref('');
+const totalNetSocial = ref('');
+const netToPayBeforeIncomeTax = ref('');
+const incomeTax = ref('');
+const netPay = ref('');
+const leaveN = ref('');
+const leaveN1 = ref('');
+const restaurantCoupons = ref('');
 const viewFiche = (ficheId) => {
 
 };
@@ -66,7 +119,7 @@ const deleteFiche = (ficheId) => {
         return;
     }
 
-    fetch('http://localhost:3000/api/fiches/deleteFiche/' + username + '/' + ficheId, {
+    fetch('https://futuficheback.onrender.com/api/fiches/deleteFiche/' + username + '/' + ficheId, {
         method: 'DELETE',
     }).then(response => {
         if (response.status === 200) {
@@ -89,6 +142,7 @@ const addFicheToServer = async () => {
     reader.addEventListener('load', async (event) => {
         const base64 = event.target.result;
         console.log(base64);
+        pdf.value = base64;
 
         try {
 
@@ -102,7 +156,7 @@ const addFicheToServer = async () => {
             const ocrData = await fetch('https://api.ocr.space/parse/image', {
                 method: 'POST',
                 headers: {
-                    apikey: '',
+                    apikey: import.meta.env.VITE_OCR_API_KEY
                 },
                 body: formData,
             });
@@ -111,7 +165,21 @@ const addFicheToServer = async () => {
             let lines = ocrDataJson.ParsedResults[0].ParsedText;
             lines = lines.replace(/•/g, '');
             console.log(lines);
+
+            function removeAccents(str) {
+                return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            }
+
+            function normalizeText(text) {
+                return removeAccents(text.toLowerCase())
+            }
+
+            lines = normalizeText(lines);
+            console.log(lines);
+
+
             const extractValue = (text, keyword) => {
+                keyword = normalizeText(keyword);
                 const regex = new RegExp(`${keyword}\\s*:?\\s*([^\\n]+)`);
                 const match = text.match(regex);
 
@@ -120,54 +188,68 @@ const addFicheToServer = async () => {
                     value = value.split('\t')[0];
                     return value;
                 } else {
-                    return null;
+                    return '';
                 }
             };
 
             const extractNumber = (text, keyword) => {
+                keyword = normalizeText(keyword);
                 const regex = new RegExp(`${keyword}\\s*:\\s*(\\d+)`);
                 const match = text.match(regex);
 
-                return match ? match[1].trim() : null;
+                return match ? match[1].trim() : '';
             };
 
-            const extractLastNumber = (text, keyword) => {
-                const regex = new RegExp(`${keyword}\\s*:\\s*([0-9., ]+)`);
-                const match = text.match(regex);
+            function extractLastNumber(texte, motCle) {
+                motCle = normalizeText(motCle);
+                console.log(texte);
+                const regexMotCle = new RegExp(motCle, 'i');
+                const matchMotCle = texte.match(regexMotCle);
 
-                if (match) {
-                    let value = match[1].trim();
+                if (matchMotCle) {
+                    const debutNombre = matchMotCle.index + matchMotCle[0].length;
+                    const regexNombre = /\d+(\s\d+)?(\.\d+)?/;
+                    const matchNombre = texte.slice(debutNombre).match(regexNombre);
 
-                    const parts = value.split(/\s+/);
-                    const lastPart = parts[parts.length - 1];
-
-                    const cleanedValue = lastPart.replace(/ /g, '').replace(/,/g, '.');
-
-                    const floatValue = parseFloat(cleanedValue);
-
-                    if (!isNaN(floatValue)) {
-                        return floatValue;
+                    if (matchNombre) {
+                        const nombre = parseFloat(matchNombre[0].replace(/\s/g, '').replace(',', '.'));
+                        return nombre;
+                    } else {
+                        return null;
                     }
+                } else {
+                    return null;
                 }
-
-                return null;
-            };
+            }
 
             const data = {
                 employer: extractNumber(lines, 'Siret'),
                 period: extractValue(lines, 'Période'),
                 jobTitle: extractValue(lines, 'Emploi'),
                 baseSalary: extractLastNumber(lines, 'Salaire de base'),
-                totalNetSocial: extractLastNumber(lines, 'Total net social'),
+                totalNetSocial: extractLastNumber(lines, 'Montant net social'),
                 netToPayBeforeIncomeTax: extractLastNumber(lines, 'Net à payer avant impôt sur le revenu'),
                 incomeTax: extractLastNumber(lines, 'Impôt sur le revenu prélevé à la source - PAS'),
                 netPay: extractLastNumber(lines, 'Net payé'),
                 leaveN: extractLastNumber(lines, 'Congés N'),
                 leaveN1: extractLastNumber(lines, 'Congés N-1'),
-                restaurantCoupons: extractNumber(lines, 'Tickets restaurant')
+                restaurantCoupons: extractLastNumber(lines, 'Titres-restaurant')
             };
 
-            console.log(data);
+            ocrData.value = data;
+            employer.value = data.employer;
+            period.value = data.period;
+            jobTitle.value = data.jobTitle;
+            baseSalary.value = data.baseSalary;
+            totalNetSocial.value = data.totalNetSocial;
+            netToPayBeforeIncomeTax.value = data.netToPayBeforeIncomeTax;
+            incomeTax.value = data.incomeTax;
+            netPay.value = data.netPay;
+            leaveN.value = data.leaveN;
+            leaveN1.value = data.leaveN1;
+            restaurantCoupons.value = data.restaurantCoupons;
+            ficheDialog.value = false;
+            ocrDialog.value = true;
 
         } catch (error) {
             console.error('Error adding fiche', error);
@@ -176,16 +258,52 @@ const addFicheToServer = async () => {
     reader.readAsDataURL(file);
 };
 
-const extractValue = (text, regex) => {
-    const match = text.match(regex);
-    if (match) {
-        return match[1];
-    }
-    return '';
-};
-
 const addFiche = () => {
     ficheDialog.value = true;
+};
+
+const sendData = () => {
+    const username = Cookies.get('username');
+    if (!username) {
+        console.log('User not logged in');
+        return;
+    }
+
+    const data = {
+        employer: employer.value,
+        period: period.value,
+        jobTitle: jobTitle.value,
+        baseSalary: baseSalary.value,
+        totalNetSocial: totalNetSocial.value,
+        netToPayBeforeIncomeTax: netToPayBeforeIncomeTax.value,
+        incomeTax: incomeTax.value,
+        netPay: netPay.value,
+        leaveN: leaveN.value,
+        leaveN1: leaveN1.value,
+        restaurantCoupons: restaurantCoupons.value,
+        username: username,
+    };
+
+    fetch('https://futuficheback.onrender.com/api/fiches/create/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    }).then(response => {
+        if (response.status === 200) {
+            console.log('Fiche added');
+            delete data.username;
+            fiches.value.push(data);
+            ocrDialog.value = false;
+            console.log(fiches.value);
+
+        } else {
+            console.log('Error adding fiche');
+        }
+    });
+
+    ocrDialog.value = false;
 };
 
 onMounted(async () => {
@@ -194,11 +312,14 @@ onMounted(async () => {
         console.log('User not logged in');
         return;
     }
-    const response = await fetch('http://localhost:3000/api/fiches/getFiches/' + username);
+    const response = await fetch('https://futuficheback.onrender.com/api/fiches/getFiches/' + username);
     response.json().then(data => {
         fiches.value = data.fiches;
     });
+
 });
+
+
 </script>
 
 <style scoped>
@@ -279,5 +400,14 @@ onMounted(async () => {
 .suppbut {
     color: #f44336;
     /* Couleur du texte */
+}
+
+.ocr-dialog {
+    background-color: #3498db;
+}
+
+.headline {
+    background-color: #34495e;
+    color: white;
 }
 </style>

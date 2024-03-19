@@ -1,5 +1,6 @@
 <template>
     <v-container fluid>
+        <alertComponent :message="message"></alertComponent>
         <v-row justify="center" align="center">
             <v-col cols="12" md="3">
                 <v-card @click="addFiche" class="add-card">
@@ -69,7 +70,8 @@
                                         <v-text-field v-model="netPay" label="Net payé"></v-text-field>
                                         <v-text-field v-model="leaveN" label="Congés N"></v-text-field>
                                         <v-text-field v-model="leaveN1" label="Congés N-1"></v-text-field>
-                                        <v-text-field v-model="restaurantCoupons" label="Tickets restaurant"></v-text-field>
+                                        <v-text-field v-model="restaurantCoupons"
+                                            label="Tickets restaurant"></v-text-field>
                                     </v-form>
                                     <v-card-actions>
                                         <v-btn @click="ocrDialog = false">Annuler</v-btn>
@@ -91,6 +93,7 @@
 import { ref, onMounted, watch } from 'vue';
 import Cookies from 'js-cookie';
 import VuePdfEmbed from 'vue-pdf-embed';
+import alertComponent from '@/components/alert.vue';
 
 const ficheDialog = ref(false);
 const fiches = ref([]);
@@ -107,6 +110,7 @@ const netPay = ref('');
 const leaveN = ref('');
 const leaveN1 = ref('');
 const restaurantCoupons = ref('');
+const message = ref('');
 const viewFiche = (ficheId) => {
 
 };
@@ -125,6 +129,7 @@ const deleteFiche = (ficheId) => {
         if (response.status === 200) {
             console.log('Fiche deleted');
         } else {
+            message.value = 'Erreur lors de la suppression de la fiche';
             console.log('Error deleting fiche');
         }
     });
@@ -299,6 +304,7 @@ const sendData = () => {
             console.log(fiches.value);
 
         } else {
+            message.value = 'Erreur lors de l\'ajout de la fiche';
             console.log('Error adding fiche');
         }
     });

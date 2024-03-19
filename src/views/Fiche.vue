@@ -123,7 +123,7 @@ const deleteFiche = (ficheId) => {
         return;
     }
 
-    fetch('https://futuficheback.onrender.com/api/fiches/deleteFiche/' + username + '/' + ficheId, {
+    fetch('https://futuficheback.onrender.com/api/fiches/' + username + '/' + ficheId, {
         method: 'DELETE',
     }).then(response => {
         if (response.status === 200) {

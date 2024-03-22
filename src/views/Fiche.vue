@@ -29,6 +29,50 @@
             </v-col>
 
         </v-row>
+        <v-dialog v-model="ficheDetailsDialog" max-width="800px" transition="dialog-transition">
+            <v-card>
+                <v-card-title class="headline">Détails de la fiche de paie</v-card-title>
+                <v-card-text>
+                    <v-container fluid>
+                        <v-row>
+                            <v-col cols="6">
+                                <v-text-field label="Période" v-model="fiche.period" readonly
+                                    prepend-icon="mdi-calendar"></v-text-field>
+                                <v-text-field label="Employeur" v-model="fiche.employer" readonly
+                                    prepend-icon="mdi-briefcase"></v-text-field>
+                                <v-text-field label="Emploi" v-model="fiche.jobTitle" readonly
+                                    prepend-icon="mdi-briefcase-account"></v-text-field>
+                                <v-text-field label="Salaire de base" v-model="fiche.baseSalary" readonly
+                                    prepend-icon="mdi-currency-eur"></v-text-field>
+                                <v-text-field label="Total net social" v-model="fiche.totalNetSocial" readonly
+                                    prepend-icon="mdi-currency-eur"></v-text-field>
+                            </v-col>
+                            <v-col cols="6">
+                                <v-text-field label="Net à payer avant impôt sur le revenu"
+                                    v-model="fiche.netToPayBeforeIncomeTax" readonly
+                                    prepend-icon="mdi-currency-eur"></v-text-field>
+                                <v-text-field label="Impôt sur le revenu prélevé à la source - PAS"
+                                    v-model="fiche.incomeTax" readonly
+                                    prepend-icon="mdi-currency-eur-off"></v-text-field>
+                                <v-text-field label="Net payé" v-model="fiche.netPay" readonly
+                                    prepend-icon="mdi-currency-eur"></v-text-field>
+                                <v-text-field label="Congés N" v-model="fiche.leaveN" readonly
+                                    prepend-icon="mdi-calendar-remove"></v-text-field>
+                                <v-text-field label="Congés N-1" v-model="fiche.leaveN1" readonly
+                                    prepend-icon="mdi-calendar-remove"></v-text-field>
+                                <v-text-field label="Titres-restaurant" v-model="fiche.restaurantCoupons" readonly
+                                    prepend-icon="mdi-food"></v-text-field>
+                            </v-col>
+                        </v-row>
+                    </v-container>
+                </v-card-text>
+                <v-card-actions>
+                    <v-btn color="primary darken-1" @click="ficheDetailsDialog = false">Fermer</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+
 
         <v-dialog v-model="ficheDialog" max-width="600px">
             <v-card>
@@ -111,8 +155,22 @@ const leaveN = ref('');
 const leaveN1 = ref('');
 const restaurantCoupons = ref('');
 const message = ref('');
-const viewFiche = (ficheId) => {
+const ficheDetailsDialog = ref(false);
+const fiche = ref({});
 
+const viewFiche = async (ficheId) => {
+    try {
+        const ficheData = await getFiche(ficheId);
+        if (!ficheData) {
+            // Handle error case (e.g., display an error message)
+            return;
+        }
+        fiche.value = ficheData;
+        ficheDetailsDialog.value = true; // Assuming ficheDetailsDialog is a reactive variable for the dialog
+    } catch (error) {
+        console.error('Error getting fiche details:', error);
+        // Handle error case (e.g., display an error message)
+    }
 };
 
 const deleteFiche = (ficheId) => {
@@ -266,6 +324,27 @@ const addFicheToServer = async () => {
 const addFiche = () => {
     ficheDialog.value = true;
 };
+
+async function getFiche(ficheId) {
+    const username = Cookies.get('username');
+    if (!username) {
+        console.log('User not logged in');
+        return null; // Return null to indicate an error
+    }
+
+    try {
+        const response = await fetch('https://futuficheback.onrender.com/api/fiches/' + username + '/' + ficheId);
+        if (!response.ok) {
+            throw new Error(`Error fetching fiche: ${response.status}`);
+        }
+        const data = await response.json();
+        return data.fiche;
+    } catch (error) {
+        console.error('Error fetching fiche:', error);
+        return null; // Return null to indicate an error
+    }
+}
+
 
 const sendData = () => {
     const username = Cookies.get('username');

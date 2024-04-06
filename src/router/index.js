@@ -26,6 +26,17 @@ const routes = [
         component: () => import('@/views/Fiche.vue'),
       },
     ],
+  },
+  {
+    path: '/stats',
+    component: () => import('@/layouts/default/Default.vue'),
+    children: [
+      {
+        path: '',
+        name: 'Stats',
+        component: () => import('@/views/Graph.vue'),
+      },
+    ],
   }
 ]
 

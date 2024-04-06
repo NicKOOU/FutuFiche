@@ -15,7 +15,6 @@
           <h2 class="font-weight-light">Pour une gestion sans tracas</h2>
         </v-row>
       </v-col>
-      <v-avatar image="@/assets/Authorç.png" size="100"></v-avatar>
       <v-col>
         <div class="author-info">
           <div>Nicolas Kourban</div>
@@ -74,7 +73,8 @@
         <v-card class="elevation-5 mb-4">
           <v-img src="@/assets/retraite.svg" alt="Feature Image" height="200"></v-img>
           <v-card-title>Retraite</v-card-title>
-          <v-card-text>Planifiez votre retraite en toute sérénité grâce à des outils avancés qui vous aident à prendre des
+          <v-card-text>Planifiez votre retraite en toute sérénité grâce à des outils avancés qui vous aident à prendre
+            des
             décisions éclairées sur votre avenir financier.</v-card-text>
         </v-card>
       </v-col>

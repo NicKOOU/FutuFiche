@@ -48,7 +48,7 @@
           <v-list-item-title>Ajouter une fiche</v-list-item-title>
         </v-list-item-content>
       </v-list-item>
-      <v-list-item to="/Stats" exact>
+      <v-list-item to="/stats" exact>
         <template v-slot:prepend>
           <v-icon>mdi-chart-bar</v-icon>
         </template>

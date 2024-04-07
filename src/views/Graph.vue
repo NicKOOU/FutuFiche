@@ -1,79 +1,133 @@
 <template>
-    <v-card flat class="mt-4 mb-4">
-        <v-card-title class="d-flex align-center pe-2">
-            <v-icon icon="mdi-file-document"></v-icon> &nbsp;
-            Dashboard
+    <div class="graphs-container">
+        <!-- Graphiques de ligne pour l'évolution des revenus net, brut et de l'imposition -->
+        <v-row justify="center" class="mb-4">
+            <v-col cols="12" md="4">
+                <v-card>
+                    <v-card-title>Évolution du Revenu Net</v-card-title>
+                    <v-card-text>
+                        <apexchart type="line" :options="revenuNetOptions" :series="revenuNetSeries"></apexchart>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="12" md="4">
+                <v-card>
+                    <v-card-title>Évolution du Revenu Brut</v-card-title>
+                    <v-card-text>
+                        <apexchart type="line" :options="revenuBrutOptions" :series="revenuBrutSeries"></apexchart>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+            <v-col cols="12" md="4">
+                <v-card>
+                    <v-card-title>Évolution de l'Impôt</v-card-title>
+                    <v-card-text>
+                        <apexchart type="line" :options="impositionOptions" :series="impositionSeries"></apexchart>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
 
-            <v-spacer></v-spacer>
-
-            <v-text-field v-model="search" density="compact" label="Rechercher" prepend-inner-icon="mdi-magnify"
-                variant="solo-filled" flat hide-details single-line></v-text-field>
-        </v-card-title>
-
-        <v-container>
-            <v-data-table v-model:search="search" :headers="headers" :items="fiches">
-                <!-- En-têtes de colonnes -->
-                <template v-slot:header="{ headers }">
-                    <thead>
-                        <tr>
-                            <th v-for="header in headers" :key="header.text">
-                                {{ header.text }}
-                            </th>
-                        </tr>
-                    </thead>
-                </template>
-
-                <!-- Contenu de la table -->
-                <template v-slot:item.period="{ item }">
-                    <div>{{ item.period }}</div>
-                </template>
-
-                <template v-slot:item.netPay="{ item }">
-                    <div>{{ item.netPay }}</div>
-                </template>
-
-                <template v-slot:item.employer="{ item }">
-                    <div>{{ item.employer }}</div>
-                </template>
-            </v-data-table>
-        </v-container>
-    </v-card>
+        <!-- Graphique en secteurs pour les différentes parts -->
+        <v-row justify="center">
+            <v-col cols="12" md="6">
+                <v-card>
+                    <v-card-title>Parts des Revenus</v-card-title>
+                    <v-card-text>
+                        <apexchart type="pie" :options="partsOptions" :series="partsSeries"></apexchart>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
+    </div>
 </template>
 
 <script>
 import { ref, onMounted } from 'vue';
-import Cookies from 'js-cookie';
 
 export default {
-    name: 'FichePaieTable',
     setup() {
-        const fiches = ref([]);
-        const search = ref('');
+        // Données pour les graphiques de ligne
+        const revenuNetOptions = ref({
+            // Options de configuration du graphique (surtout les axes X et Y)
+            xaxis: {
+                categories: [], // Vous pouvez remplir cette liste avec les périodes de vos fiches
+            },
+        });
+        const revenuNetSeries = ref([{ name: 'Revenu Net', data: [] }]);
+
+        const revenuBrutOptions = ref({
+            // Options de configuration du graphique (surtout les axes X et Y)
+            xaxis: {
+                categories: [], // Vous pouvez remplir cette liste avec les périodes de vos fiches
+            },
+        });
+        const revenuBrutSeries = ref([{ name: 'Revenu Brut', data: [] }]);
+
+        const impositionOptions = ref({
+            // Options de configuration du graphique (surtout les axes X et Y)
+            xaxis: {
+                categories: [], // Vous pouvez remplir cette liste avec les périodes de vos fiches
+            },
+        });
+        const impositionSeries = ref([{ name: 'Imposition', data: [] }]);
+
+        // Données pour le graphique en secteurs (part des revenus)
+        const partsOptions = ref({
+            // Options de configuration du graphique (notamment le titre)
+            labels: ['Revenu Net', 'Impôt'], // Vous pouvez ajouter d'autres catégories si nécessaire
+        });
+        const partsSeries = ref([0, 0]); // Remplissez cette liste avec le montant total du revenu net et de l'impôt
 
         onMounted(async () => {
-            const username = Cookies.get('username');
-            if (!username) {
-                console.log('User not logged in');
-                return;
-            }
-            const response = await fetch('https://futuficheback.onrender.com/api/fiches/getFiches/' + username);
+            // Récupérer les données de l'API
+            const response = await fetch('https://futuficheback.onrender.com/api/fiches/getFiches/Nyler');
             const data = await response.json();
-            fiches.value = data.fiches;
+
+            // Mettre à jour les données des graphiques avec les données de l'API
+            revenuNetOptions.value.xaxis.categories = data.fiches.map(fiche => fiche.period);
+            revenuNetSeries.value[0].data = data.fiches.map(fiche => fiche.netPay);
+
+            revenuBrutOptions.value.xaxis.categories = data.fiches.map(fiche => fiche.period);
+            revenuBrutSeries.value[0].data = data.fiches.map(fiche => fiche.baseSalary);
+
+            impositionOptions.value.xaxis.categories = data.fiches.map(fiche => fiche.period);
+            impositionSeries.value[0].data = data.fiches.map(fiche => fiche.incomeTax);
+
+            // Calculer la part des revenus net et de l'impôt
+            const totalRevenuNet = data.fiches.reduce((acc, fiche) => acc + fiche.netPay, 0);
+            const totalImpot = data.fiches.reduce((acc, fiche) => acc + fiche.incomeTax, 0);
+            partsSeries.value = [totalRevenuNet, totalImpot];
         });
 
-        const headers = [
-            { title: 'Période', align: 'start', sortable: true, value: 'period' },
-            { title: 'Net Payé', value: 'netPay' },
-            { title: 'Employeur', value: 'employer' },
-        ];
-
         return {
-            fiches,
-            headers,
-            search
+            revenuNetOptions,
+            revenuNetSeries,
+            revenuBrutOptions,
+            revenuBrutSeries,
+            impositionOptions,
+            impositionSeries,
+            partsOptions,
+            partsSeries,
         };
     },
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.graphs-container {
+    margin-top: 20px;
+}
+
+.mb-4 {
+    margin-bottom: 20px;
+}
+
+.chart {
+    margin-bottom: 20px;
+}
+
+.pie-chart {
+    margin-top: 20px;
+}
+</style>

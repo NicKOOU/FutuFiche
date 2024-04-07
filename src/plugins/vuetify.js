@@ -7,7 +7,6 @@
 // Styles
 import '@mdi/font/css/materialdesignicons.css'
 import 'vuetify/styles'
-import { VDataTable } from 'vuetify/labs/VDataTable'
 import VueApexCharts from "vue3-apexcharts";
 import { createVuetify } from 'vuetify'
 
@@ -24,7 +23,6 @@ export default createVuetify({
     },
   },
   components: {
-    VDataTable,
     "apexchart": VueApexCharts
   },
 

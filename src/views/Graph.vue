@@ -44,6 +44,7 @@
 
 <script>
 import { ref, onMounted } from 'vue';
+import Cookies from 'js-cookie';
 
 export default {
     setup() {
@@ -81,7 +82,12 @@ export default {
 
         onMounted(async () => {
             // Récupérer les données de l'API
-            const response = await fetch('https://futuficheback.onrender.com/api/fiches/getFiches/Nyler');
+            const username = Cookies.get('username');
+    if (!username) {
+        console.log('User not logged in');
+        return;
+    }
+            const response = await fetch('https://futuficheback.onrender.com/api/fiches/getFiches/' + username);
             const data = await response.json();
 
             // Mettre à jour les données des graphiques avec les données de l'API

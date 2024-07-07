@@ -103,7 +103,7 @@ export default {
             // Calculer la part des revenus net et de l'impôt
             const totalRevenuNet = data.fiches.reduce((acc, fiche) => acc + fiche.netPay, 0);
             const totalImpot = data.fiches.reduce((acc, fiche) => acc + fiche.incomeTax, 0);
-            partsSeries.value = [totalRevenuNet, totalImpot];
+            partsSeries.value = [totalRevenuNet, totalImpot-totalRevenuNet];
         });
 
         return {
